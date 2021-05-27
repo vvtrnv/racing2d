@@ -6,7 +6,7 @@ import java.awt.event.KeyEvent;
 
 public class Player
 {
-    public static final int MAX_SPEED = 50;
+    public static final int MAX_SPEED = 35;
     public static final int MAX_TOP = 240;
     public static final int MAX_BOTTOM = 625;
     public static final int MAX_TANK = 80;
@@ -22,8 +22,8 @@ public class Player
     private Image img_left = new ImageIcon("src/res/player_left1.png").getImage();
     private Image img_right = new ImageIcon("src/res/player_right1.png").getImage();
 
-    private int speed = 0; // Скорость
-    private int speedup = 0; // Ускорение
+    private double speed = 0; // Скорость
+    private double speedup = 0; // Ускорение
     private int distance = 0; // Проденное расстояние
 
     // Слои заднего фона
@@ -86,11 +86,11 @@ public class Player
         int key = e.getKeyCode();
         if(key == KeyEvent.VK_RIGHT)
         {
-            speedup = 1;
+            speedup = 0.5;
         }
         if(key == KeyEvent.VK_LEFT)
         {
-            speedup = -1;
+            speedup = -0.5;
         }
 
         if(key == KeyEvent.VK_UP)
@@ -147,9 +147,9 @@ public class Player
     public Image getImg() { return img; }
     public int getX() { return x; }
     public int getY() { return y; }
-    public int getSpeed() { return speed; }
+    public double getSpeed() { return speed; }
     public double getTank() { return tank;}
-
+    public double getDistance() { return distance; }
 
     public int getLayer1() { return layer1; }
     public int getLayer2() { return layer2; }

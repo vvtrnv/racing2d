@@ -30,7 +30,7 @@ public abstract class Enemy implements IEnemy
     @Override
     public void move()
     {
-        x = x - road.getPlayer().getSpeed() + speed;
+        x = x - (int)road.getPlayer().getSpeed() + speed;
     }
 
     @Override

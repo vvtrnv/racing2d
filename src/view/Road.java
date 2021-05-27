@@ -1,7 +1,7 @@
 package view;
 
 import objects.Fuel;
-import threads.Audio;
+import threads.AudioThread;
 import transport.Player;
 import transport.enemy.Enemy;
 import transport.enemy.JacksonBlack;
@@ -30,13 +30,13 @@ public class Road extends JPanel implements ActionListener, Runnable
     private Image img_boom = new ImageIcon("src/res/boom.png").getImage();
     private boolean boom = false;
 
-    private Timer mainTimer = new Timer(20, this);
+    private Timer mainTimer = new Timer(14, this);
 
     private Player player = new Player();
 
     private Thread enemiesFactory = new Thread(this);
-    private Audio takeFuel = new Audio("src/res/sound/takeFuel.WAV", 0.7); // Звук подбора топлива
-    private Audio backgroundAudio = new Audio("src/res/sound/background.WAV", 0.5);
+    private AudioThread takeFuel = new AudioThread("src/res/sound/takeFuel.WAV", 0.7); // Звук подбора топлива
+    private AudioThread backgroundAudioThread = new AudioThread("src/res/sound/background.WAV", 0.5);
 
     private ArrayList<Enemy> enemyList = new ArrayList<Enemy>();
     private ArrayList<Fuel> fuelList = new ArrayList<Fuel>();
@@ -47,14 +47,14 @@ public class Road extends JPanel implements ActionListener, Runnable
         enemiesFactory.start(); // Запуск потока
 
         // Музыка на заднем фоне
-        backgroundAudio.sound();
-        backgroundAudio.setVolumeC();
+        backgroundAudioThread.sound();
+        backgroundAudioThread.setVolumeC();
 
         addKeyListener(new MyKeyAdapter());
         setFocusable(true);
     }
 
-    // Метод отрисовки дороги
+    // Метод отрисовки
     public void paint(Graphics g)
     {
         g = (Graphics2D)g;
@@ -67,19 +67,23 @@ public class Road extends JPanel implements ActionListener, Runnable
         g.drawImage(player.getImg(), player.getX(), player.getY(), null);
 
         // Спидометр
-        double speed = (200 / Player.MAX_SPEED) * player.getSpeed();
+        int speed = (200 / Player.MAX_SPEED) * (int)player.getSpeed();
         g.setColor(Color.WHITE);
-        Font font = new Font("Arial", Font.ITALIC, 20);
+        Font font = new Font("Arial", Font.PLAIN, 20);
         g.setFont(font);
         g.drawString("Скорость: " + speed + "км/ч", 50, 755);
+        g.drawString("Объём бака: " + (int)player.getTank(), 250, 755);
 
-        //
-        g.drawString("Объём бака: " + (int)player.getTank(), 300, 755);
+        // Пройденная дистанция
+        double distance = player.getDistance() / 200;
+        g.drawString("Пройденое расстояние: " + distance, 450, 755);
 
+        checkingForGoingOutOfBoundsEnemy();
         // Отрисовка врагов
+        Enemy enemy;
         for(int i = 0; i < enemyList.size(); i++)
         {
-            Enemy enemy = enemyList.get(i);
+            enemy = enemyList.get(i);
 
             if(enemy instanceof JacksonBlack)
                 g.drawImage(JacksonBlack.image, enemy.getX(), enemy.getY(), null);
@@ -87,8 +91,10 @@ public class Road extends JPanel implements ActionListener, Runnable
                 g.drawImage(KruzWoman.image, enemy.getX(), enemy.getY(), null);
             else if(enemy instanceof RamoneYellow)
                 g.drawImage(RamoneYellow.image, enemy.getX(), enemy.getY(), null);
+
         }
 
+        checkingForGoingOutOfBoundsFuel();
         // Отрисовка канистр
         for(int i = 0; i < fuelList.size(); i++)
         {
@@ -111,29 +117,35 @@ public class Road extends JPanel implements ActionListener, Runnable
                 Thread.sleep(rand.nextInt(2800));
 
                 // Другие машины
-                AbstractFactoryEnemy factory = null;
-                int chooseModel = rand.nextInt(3);
-                if(chooseModel == 0)
+                if(enemyList.size() < 25 && player.getSpeed() > 15)
                 {
-                    factory = new AbstractFactoryJacksonBlack();
+                    AbstractFactoryEnemy factory = null;
+                    int chooseModel = rand.nextInt(3);
+                    if(chooseModel == 0)
+                    {
+                        factory = new AbstractFactoryJacksonBlack();
+                    }
+                    if(chooseModel == 1)
+                    {
+                        factory = new AbstractFactoryKruzWoman();
+                    }
+                    if(chooseModel == 2)
+                    {
+                        factory = new AbstractFactoryRamoneYellow();
+                    }
+                    Enemy newEnemy = factory.enemyBorn(1200,
+                            240 + rand.nextInt(380),
+                            15 + rand.nextInt(12),
+                            this);
+                    enemyList.add(newEnemy);
                 }
-                if(chooseModel == 1)
-                {
-                    factory = new AbstractFactoryKruzWoman();
-                }
-                if(chooseModel == 2)
-                {
-                    factory = new AbstractFactoryRamoneYellow();
-                }
-                Enemy newEnemy = factory.enemyBorn(1200,
-                        240 + rand.nextInt(380),
-                        30 + rand.nextInt(12),
-                        this);
-                enemyList.add(newEnemy);
 
                 // Канистры
-                Fuel newObj = new Fuel( 1200, 240 + rand.nextInt(380), this);
-                fuelList.add(newObj);
+                if(fuelList.size() < 2 && player.getSpeed() > 15)
+                {
+                    Fuel newObj = new Fuel( 1800, 240 + rand.nextInt(380), this);
+                    fuelList.add(newObj);
+                }
             }
             catch (InterruptedException e)
             {
@@ -164,33 +176,46 @@ public class Road extends JPanel implements ActionListener, Runnable
     {
         player.move();
 
-        Fuel fuel;
-        for(int i = 0; i < fuelList.size();i++)
-        {
-            fuel = fuelList.get(i);
-            if(fuel.getX() < 2400 || fuel.getX() > -2400)
-                // Движение врагов
-                fuel.showOnRoad();
-            else
-                fuelList.remove(i);
-        }
-
-        Enemy enemy;
-        for(int i = 0; i < enemyList.size(); i++)
-        {
-            enemy = enemyList.get(i);
-
-            if(enemy.getX() < 2400 || enemy.getX() > -2400)
-                // Движение врагов
-                enemy.move();
-            else
-                enemyList.remove(i);
-        }
-
         repaint();
         testCollisionWithEnemies();
         testPickUpFuel();
         testForEmptyTank();
+    }
+
+    private boolean checkingForGoingOutOfBoundsEnemy()
+    {
+        Enemy enemy;
+        for(int i = 0; i < enemyList.size(); i++)
+        {
+            enemy = enemyList.get(i);
+            if(enemy.getX() >= 2400 || enemy.getX() <= -2400)
+            {
+                System.out.println("DELETE CAR");
+                enemyList.remove(i);
+            }
+            else
+            {
+                // Движение врагов
+                enemy.move();
+            }
+        }
+
+        return true;
+    }
+
+    private boolean checkingForGoingOutOfBoundsFuel()
+    {
+        Fuel fuel;
+        for(int i = 0; i < fuelList.size();i++)
+        {
+            fuel = fuelList.get(i);
+            if(fuel.getX() >= 2400 || fuel.getX() <= -2400)
+                fuelList.remove(i);
+            else
+                fuel.showOnRoad();
+        }
+
+        return true;
     }
 
     private void testCollisionWithEnemies()
@@ -203,7 +228,7 @@ public class Road extends JPanel implements ActionListener, Runnable
             if(player.getRect().intersects(enemy.getRect()))
             {
                 boom = true;
-                JOptionPane.showMessageDialog(null, "LOSER!");
+                JOptionPane.showMessageDialog(null, "Глаза разунь, куда едешь, кчаууу!!");
 
                 System.exit(0);
             }
@@ -231,10 +256,13 @@ public class Road extends JPanel implements ActionListener, Runnable
     {
         if(player.getTank() == 0)
         {
-            JOptionPane.showMessageDialog(null, "Какая неожиданность, мне неоткуда брать силы \nПоэтому я проиграл");
+            JOptionPane.showMessageDialog(null, "Я усталь, сил нет. \nКчауу :(");
             System.exit(0);
         }
     }
 
+
+    public ArrayList<Enemy> getEnemyList() { return enemyList; }
+    public ArrayList<Fuel> getFuelList() { return fuelList; }
     public Player getPlayer() { return player;}
 }

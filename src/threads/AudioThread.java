@@ -4,14 +4,14 @@ import javax.sound.sampled.*;
 import java.io.File;
 import java.io.IOException;
 
-public class Audio
+public class AudioThread
 {
     private String pathToAudio;
     private Clip clip = null;
     private FloatControl volumeC = null; // Контроллер громкости
     private double wt; // Уровень громкости
 
-    public Audio(String pathToAudio, double wt)
+    public AudioThread(String pathToAudio, double wt)
     {
         this.pathToAudio = pathToAudio;
         this.wt = wt;

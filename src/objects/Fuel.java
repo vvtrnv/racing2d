@@ -25,7 +25,7 @@ public class Fuel
 
     public void showOnRoad()
     {
-        x = x - road.getPlayer().getSpeed() + 0;
+        x = x - (int)road.getPlayer().getSpeed() + 0;
     }
 
     static
